@@ -1,0 +1,8 @@
+{
+  "org": "1ryln5",
+  "domain": "internetofthings.ibmcloud.com",
+  "type": "RPIGWType",
+  "id": "gwb827",
+  "auth-method" : "token",
+  "auth-token" : "srinivas"
+}
