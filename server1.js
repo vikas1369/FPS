@@ -31,12 +31,16 @@ var code="";
 var comeout=0;
 lcd.on('ready', function() {
 lcd.setCursor(0, 0);
-lcd.print("A");
+lcd.print("Enter passkey");
+var count=0;
 var interval=setInterval(function(){
 	for (var j = 0; j < 4; j++) {
 		rpio.write(col[j],rpio.LOW);
 		for (var i = 0; i < 4; i++) {
 			if(rpio.read(row[i])==0){
+			count++;
+				if(count==1)
+					lcd.clear();
 			console.log(matrix[i][j]);
   			lcd.print(matrix[i][j]);
 			if(matrix[i][j]=='#'){
