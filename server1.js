@@ -7,6 +7,7 @@ rpio.open(3, rpio.OUTPUT, rpio.LOW);
  * The sleep functions block, but rarely in these simple programs does one care
  * about that.  Use a setInterval()/setTimeout() loop instead if it matters.
  */
+var conn;
 var Lcd = require('lcd'),
   lcd = new Lcd({
     rs: 18,
@@ -29,10 +30,12 @@ for (var i = 0; i < 4; i++) {
 }
 var code="";
 var comeout=0;
+var returned=false;
 lcd.on('ready', function() {
 lcd.setCursor(0, 0);
 lcd.print("Enter passkey");
 var count=0;
+var passcode='';
 var interval=setInterval(function(){
 	for (var j = 0; j < 4; j++) {
 		rpio.write(col[j],rpio.LOW);
@@ -40,28 +43,75 @@ var interval=setInterval(function(){
 			if(rpio.read(row[i])==0){
 			count++;
 				if(count==1)
-					lcd.clear();
+					lcd.clear();//Clears the text Enter pass key
 			console.log(matrix[i][j]);
-  			lcd.print(matrix[i][j]);
+			passcode=passcode+matrix[i][j];
+			if(matrix[i][j]!='#'){
+				lcd.print(matrix[i][j]);
+			}
 			if(matrix[i][j]=='#'){
 				comeout=1;
 				clearInterval(interval);
-				break;
+				passcode=passcode.substring(0,passcode.length-1);
+				dbconnection(passcode);
+				//break;
 			}
 			while(rpio.read(row[i])==0);
 			}	
 		}
-		if(comeout==1)
-			break;
-		else
+		//if(comeout==1)
 		rpio.write(col[j],rpio.HIGH);
+		//break;
+		//else
 	}
-},50);
+},50)
+function dbconnection(passkey){
+	var mysql      = require('mysql');
+    var connection = mysql.createConnection({
+        host     : 'iot.cqsrh7cmen98.us-west-2.rds.amazonaws.com',
+        user     : 'vikas1369',
+        password : 'indica108',
+    });
+
+    connection.connect(function(err) {
+        if (err) {
+            console.error('error connecting: ' + err.stack);
+            return;
+        }
+
+        console.log('connected as id ' + connection.threadId);
+    });
+    console.log(passkey);
+    var query1=connection.query('SELECT * FROM IOTSCHOOL.Course WHERE Passkey=?',[passkey]);
+    query1.on("error",function (err) {
+        console.log(err.message);
+    })
+    query1.on("result",function (row) {
+
+        console.log("Result");
+        console.log(row);
+        returned=true;
+    });
+    query1.on("end",function () {
+        if(returned ===true){
+            console.log("Successful");
+	    lcd.clear();
+	    lcd.setCursor(0, 0);
+	    lcd.print("Ready for fingerprint");
+        }
+        else{	
+            lcd.clear();
+	    lcd.setCursor(0, 0);
+	    lcd.print("Try again");
+	    interval;
+        }
+        connection.end()
+    })
+}
 //console.log("Code entered "+code);
 //end of keypad code  
-});
 
- 
+});
 // If ctrl+c is hit, free resources and exit.
 process.on('SIGINT', function() {
   lcd.clear();
