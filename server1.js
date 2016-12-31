@@ -30,20 +30,18 @@ for (var i = 0; i < 4; i++) {
 var code="";
 var comeout=0;
 lcd.on('ready', function() {
-    lcd.setCursor(0, 0);
-    //start of keypad code
-    while(true){
+lcd.setCursor(0, 0);
+lcd.print("A");
+var interval=setInterval(function(){
 	for (var j = 0; j < 4; j++) {
 		rpio.write(col[j],rpio.LOW);
 		for (var i = 0; i < 4; i++) {
 			if(rpio.read(row[i])==0){
-			//console.log("Yes");
-			code=code+matrix[i][j];
 			console.log(matrix[i][j]);
-			//console.log("Code entered till now "+code);
   			lcd.print(matrix[i][j]);
 			if(matrix[i][j]=='#'){
 				comeout=1;
+				clearInterval(interval);
 				break;
 			}
 			while(rpio.read(row[i])==0);
@@ -52,16 +50,13 @@ lcd.on('ready', function() {
 		if(comeout==1)
 			break;
 		else
-			rpio.write(col[j],rpio.HIGH);
+		rpio.write(col[j],rpio.HIGH);
 	}
-	if(comeout==1)
-		break;
-	}
+},50);
 //console.log("Code entered "+code);
-
-    //end of keypad code
-  
+//end of keypad code  
 });
+
  
 // If ctrl+c is hit, free resources and exit.
 process.on('SIGINT', function() {
