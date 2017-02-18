@@ -86,6 +86,24 @@ function takeKeypadInput(){
 //amazon db for corresponing course. If it is successful then fingerprint scanning
 //is started
 function checkPassKey(passkey){
+	var count=0;
+	var count1=5;
+	lcd.clear();
+	lcd.setCursor(0, 0);
+	lcd.print('Checking');
+	var intervalDB=setInterval(function(){
+		if(count==5){
+			count=0;
+			lcd.clear();
+			lcd.setCursor(0, 0);
+			lcd.print('Checking');
+		}
+		if(count<5){
+			count++;
+			lcd.print('.');
+		}
+		},500)
+	var courseCode;
     connection = mysql.createConnection({
         host     : 'iot.cqsrh7cmen98.us-west-2.rds.amazonaws.com',
         user     : 'vikas1369',
@@ -99,23 +117,24 @@ function checkPassKey(passkey){
         console.log('connected as id ' + connection.threadId);
     });
     console.log(passkey);
-    var query1=connection.query('SELECT * FROM IOTSCHOOL.Course WHERE Passkey=?',[passkey]);
+    var query1=connection.query('SELECT Coursecode FROM IOTSCHOOL.Course WHERE Passkey=?',[passkey]);
     query1.on("error",function (err) {
         console.log(err.message);
     })
     query1.on("result",function (row) {
-
         console.log("Result");
-        console.log(row);
+        console.log(row.Coursecode);
+        courseCode=row.Coursecode;
         returned=true;
     });
     query1.on("end",function () {
+		clearInterval(intervalDB);
         if(returned ===true){
             console.log("Successful");
 	    lcd.clear();
 	    lcd.setCursor(0, 0);
 	    lcd.print("Ready for fingerprint");
-	    startFingerScan();
+	    startFingerScan(courseCode);
 	    returned=false;
         }
         else{	
@@ -133,7 +152,8 @@ function checkPassKey(passkey){
 //If the finger is pressed and it doesn't match it will show the error 
 //If it successfully matches it displays the Roll No. of student on LCD and 
 //It continue to look for next thumb impression
-function startFingerScan(){
+function startFingerScan(courseCode){
+	var studentId;
 	console.log('Inside finger scan');
 	fps.init().then(
 	function() {
@@ -160,15 +180,17 @@ function startFingerScan(){
 					lcd.clear();
 	    				lcd.setCursor(0, 0);
 	    				lcd.print("RNo:" +row.Studentid );
+	    				studentId=row.Studentid;
         				returned=true;
     				});
     				query1.on("end",function () {
         				if(returned ===true){
-            					console.log("Query for Roll No. successful");
+            				console.log("Query for Roll No. successful");
 	    					returned=false;
+	    					storeAttendance(courseCode,studentId);
         				}
         				else{	
-            					lcd.clear();
+            				lcd.clear();
 	    					lcd.setCursor(0, 0);
 	    					lcd.print("Database issue");
         				}
@@ -185,6 +207,10 @@ function startFingerScan(){
 		console.log('init err: ' + fps.decodeError(err));
 	});
 }//End of startFingerScan function
+
+function storeAttendance(courseCode,studentId){
+	console.log('Attendance recorded '+'course: '+courseCode+' studentid:'+studentId);
+}
 });//End of lcd on function
 
 // If ctrl+c is hit, free resources and exit.
