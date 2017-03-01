@@ -186,7 +186,7 @@ function checkPassKey(passkey){
 }
 
 function signOut(passkey){
-	if(passkey==KEY){
+	if(endsWith(passkey,KEY)==true){
 		console.log('Inside signout function');
 		clearInterval(durFingerScan);
 		fps.ledONOFF(0);
@@ -203,8 +203,12 @@ function signOut(passkey){
 	else{
 		takeKeypadInput();
 	}
+	
 }
 
+function endsWith(str,suffix){
+	return str.indexOf(suffix,str.length-suffix.length)!==-1;
+}
 //This function constantly check for thumb impression.
 //If there are no thumb impression, it will display the message 'Press the finger' 
 //If the finger is pressed and it doesn't match it will show the error 
@@ -373,3 +377,4 @@ process.on('SIGINT', function() {
   lcd.close();
   process.exit();
 });
+
