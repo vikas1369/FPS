@@ -13,6 +13,7 @@ var connection;
 var code="";
 var comeout=0;
 var returned=false;
+var isInit=false;
 rpio.open(3, rpio.OUTPUT, rpio.LOW);
   lcd = new Lcd({
     rs: 18,
@@ -43,7 +44,11 @@ for (var i = 0; i < 4; i++) {
 }
 lcd.on('ready', function() {
 	lcd.setCursor(0, 0);
-	lcd.print("Enter passkey");
+	lcd.print("Please Enter the");
+	lcd.once('printed', function() {
+	lcd.setCursor(0, 1);
+	lcd.print("Passkey");
+	});
 	takeKeypadInput();
 function takeKeypadInput(){
 	var count=0;
@@ -128,12 +133,9 @@ function checkPassKey(passkey){
         returned=true;
     });
     query1.on("end",function () {
-		clearInterval(intervalDB);
+	clearInterval(intervalDB);
         if(returned ===true){
             console.log("Successful");
-	    lcd.clear();
-	    lcd.setCursor(0, 0);
-	    lcd.print("Ready for fingerprint");
 	    startFingerScan(courseCode);
 	    returned=false;
         }
@@ -141,7 +143,7 @@ function checkPassKey(passkey){
         lcd.clear();
 	    lcd.setCursor(0, 0);
 	    lcd.print("Try again");
-		takeKeypadInput();
+	    takeKeypadInput();
         }
         //connection.end()
     })
@@ -153,11 +155,15 @@ function checkPassKey(passkey){
 //If it successfully matches it displays the Roll No. of student on LCD and 
 //It continue to look for next thumb impression
 function startFingerScan(courseCode){
-	var fpsids=new Array();
-	var studentId;
-	var classval;
-	var FPSID;
 	console.log('Inside finger scan');
+	lcd.clear();
+	lcd.setCursor(0, 0);
+	lcd.print("Ready for Finger");
+	lcd.once('printed', function() {
+	lcd.setCursor(0, 1);
+	lcd.print("scanning");
+	});
+	if(isInit===false){
 	fps.init().then(
 	function() {
 		isInit = true;
@@ -165,18 +171,46 @@ function startFingerScan(courseCode){
 		console.log('firmware version: ' + fps.firmwareVersion);
 		console.log('iso area max: ' + fps.isoAreaMaxSize);
 		console.log('device serial number: ' + fps.deviceSerialNumber);
+		takeAttendance(courseCode);
+	},
+	function(err) {
+		console.log('init err: ' + fps.decodeError(err));
+	});
+	}
+	else{
+		takeAttendance(courseCode);
+	}
+}//End of startFingerScan function
+
+function takeAttendance(courseCode){
+	var fpsids=new Array();
+	var studentId;
+	var classval;
+	var FPSID;
 		fps.ledONOFF(1);
 		var startTime = new Date();
 		var seconds=0;
-		setInterval(function(){
+		var durFingerScan=setInterval(function(){
 		console.log(fpsids);
 		var endTime=new Date();
 		var timeDiff=endTime-startTime;
 		console.log('In milisec:'+timeDiff);
-		timeDiff/=1000;
 		//seconds=(seconds<60)?Math.round(timeDiff%60):(seconds+Math.round(timeDiff%60));
-		seconds=seconds+timeDiff/1000;
+		seconds=timeDiff/1000;
 		console.log('Seconds:'+seconds);
+		if(seconds>=15){
+			fps.ledONOFF(0);
+			clearInterval(durFingerScan);
+			//fps.close();
+			lcd.clear();
+			lcd.print("Please Enter the");
+			lcd.once('printed', function() {
+			lcd.setCursor(0, 1);
+			lcd.print("Passkey");
+			takeKeypadInput();
+			});
+		}
+		else{
 		fps.captureFinger(0)
 			.then(function() {
 				return fps.identify();
@@ -232,12 +266,9 @@ function startFingerScan(courseCode){
 				console.log("identify err: " + fps.decodeError(err));
 			});
 		}//End of capture finger
+		}
 		,3000);//Endo of set interval function;
-	},
-	function(err) {
-		console.log('init err: ' + fps.decodeError(err));
-	});
-}//End of startFingerScan function
+}//End of function takeAttendance
 
 function storeAttendance(ID,courseCode,studentId,classval,cb){//cb is used for callback
 	console.log("Inside Store attendance function");
