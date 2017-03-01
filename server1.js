@@ -166,8 +166,17 @@ function startFingerScan(courseCode){
 		console.log('iso area max: ' + fps.isoAreaMaxSize);
 		console.log('device serial number: ' + fps.deviceSerialNumber);
 		fps.ledONOFF(1);
+		var startTime = new Date();
+		var seconds=0;
 		setInterval(function(){
 		console.log(fpsids);
+		var endTime=new Date();
+		var timeDiff=endTime-startTime;
+		console.log('In milisec:'+timeDiff);
+		timeDiff/=1000;
+		//seconds=(seconds<60)?Math.round(timeDiff%60):(seconds+Math.round(timeDiff%60));
+		seconds=seconds+timeDiff/1000;
+		console.log('Seconds:'+seconds);
 		fps.captureFinger(0)
 			.then(function() {
 				return fps.identify();
@@ -255,13 +264,16 @@ function storeAttendance(ID,courseCode,studentId,classval,cb){//cb is used for c
 	    		lcd.setCursor(0, 0);
 	    		lcd.print("Record:"+studentId);
 			console.log('Attendance recorded '+'course: '+courseCode+' studentid:'+studentId);
+			cb();
         	}
         	else{	
             		lcd.clear();
 	    		lcd.setCursor(0, 0);
 	    		lcd.print("Cant Record");
+			cb();
         	}
     	})
+	
 }//End of storeAttendance function
 });//End of lcd on function
 
