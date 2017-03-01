@@ -14,6 +14,9 @@ var code="";
 var comeout=0;
 var returned=false;
 var isInit=false;
+var durFingerScan;
+var KEY;
+var logout=0;
 rpio.open(3, rpio.OUTPUT, rpio.LOW);
   lcd = new Lcd({
     rs: 18,
@@ -51,10 +54,10 @@ lcd.on('ready', function() {
 	});
 	takeKeypadInput();
 function takeKeypadInput(){
-	var count=0;
-	var passcode='';
-	var interval=setInterval(function(){
-	for (var j = 0; j < 4; j++) {
+		var count=0;
+		var passcode='';
+		var interval=setInterval(function(){
+		for (var j = 0; j < 4; j++) {
 		rpio.write(col[j],rpio.LOW);
 		for (var i = 0; i < 4; i++) {
 			if(rpio.read(row[i])==0){
@@ -66,12 +69,18 @@ function takeKeypadInput(){
 				if(matrix[i][j]!='#'){
 					lcd.print(matrix[i][j]);
 				}
-				if(matrix[i][j]=='#'){
-					comeout=1;
+				if(matrix[i][j]=='#' && logout==0){
+					console.log('If log 0 Value of logout '+logout);
 					clearInterval(interval);
 					passcode=passcode.substring(0,passcode.length-1);
 					checkPassKey(passcode);
 				//break;
+				}
+				else if(matrix[i][j]=='#' && logout==1){
+					console.log('If log 1 Value of logout '+logout);
+					clearInterval(interval);
+					passcode=passcode.substring(0,passcode.length-1);
+					signOut(passcode);
 				}
 				while(rpio.read(row[i])==0);
 			}	
@@ -91,6 +100,7 @@ function takeKeypadInput(){
 //amazon db for corresponing course. If it is successful then fingerprint scanning
 //is started
 function checkPassKey(passkey){
+	KEY=passkey;
 	var count=0;
 	var count1=5;
 	lcd.clear();
@@ -149,6 +159,26 @@ function checkPassKey(passkey){
     })
 }
 
+function signOut(passkey){
+	if(passkey==KEY){
+		console.log('Inside signout function');
+		clearInterval(durFingerScan);
+		fps.ledONOFF(0);
+		//fps.close();
+		lcd.clear();
+		lcd.print("Please Enter the");
+		lcd.once('printed', function() {
+		lcd.setCursor(0, 1);
+		lcd.print("Passkey");
+		logout=0;
+		takeKeypadInput();
+		});
+	}
+	else{
+		takeKeypadInput();
+	}
+}
+
 //This function constantly check for thumb impression.
 //If there are no thumb impression, it will display the message 'Press the finger' 
 //If the finger is pressed and it doesn't match it will show the error 
@@ -190,7 +220,9 @@ function takeAttendance(courseCode){
 		fps.ledONOFF(1);
 		var startTime = new Date();
 		var seconds=0;
-		var durFingerScan=setInterval(function(){
+		logout=1;
+		takeKeypadInput();//added
+		durFingerScan=setInterval(function(){ 
 		console.log(fpsids);
 		var endTime=new Date();
 		var timeDiff=endTime-startTime;
@@ -198,7 +230,8 @@ function takeAttendance(courseCode){
 		//seconds=(seconds<60)?Math.round(timeDiff%60):(seconds+Math.round(timeDiff%60));
 		seconds=timeDiff/1000;
 		console.log('Seconds:'+seconds);
-		if(seconds>=15){
+		if(seconds>=30){
+			logout=0;
 			fps.ledONOFF(0);
 			clearInterval(durFingerScan);
 			//fps.close();
@@ -207,7 +240,7 @@ function takeAttendance(courseCode){
 			lcd.once('printed', function() {
 			lcd.setCursor(0, 1);
 			lcd.print("Passkey");
-			takeKeypadInput();
+			//takeKeypadInput();
 			});
 		}
 		else{
