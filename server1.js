@@ -153,7 +153,10 @@ function checkPassKey(passkey){
 //If it successfully matches it displays the Roll No. of student on LCD and 
 //It continue to look for next thumb impression
 function startFingerScan(courseCode){
+	var fpsids=new Array();
 	var studentId;
+	var classval;
+	var FPSID;
 	console.log('Inside finger scan');
 	fps.init().then(
 	function() {
@@ -164,53 +167,102 @@ function startFingerScan(courseCode){
 		console.log('device serial number: ' + fps.deviceSerialNumber);
 		fps.ledONOFF(1);
 		setInterval(function(){
+		console.log(fpsids);
 		fps.captureFinger(0)
 			.then(function() {
 				return fps.identify();
 			})
 			.then(function(ID) {
 				console.log("identify: ID = " + ID);
+				if(fpsids.indexOf(ID)<0)//Record attendance only if the attendance has not already been recorded
+				{
 				lcd.clear();
 				lcd.setCursor(0, 0);
-				var query1=connection.query('SELECT Studentid FROM IOTSCHOOL.Students WHERE FPSid=?',[ID]);
+				var query1=connection.query('SELECT Studentid,Class FROM IOTSCHOOL.Students WHERE FPSid=?',[ID]);
 				query1.on("result",function (row) {
         				console.log("Result");
         				console.log(row);
 					console.log(row.Studentid);
+					console.log(row.Class);
 					lcd.clear();
 	    				lcd.setCursor(0, 0);
 	    				lcd.print("RNo:" +row.Studentid );
 	    				studentId=row.Studentid;
+					classval=row.Class;
+					FPSID=ID;
         				returned=true;
     				});
     				query1.on("end",function () {
         				if(returned ===true){
             				console.log("Query for Roll No. successful");
 	    					returned=false;
-	    					storeAttendance(courseCode,studentId);
+						var stored;
+	    					storeAttendance(ID,courseCode,studentId,classval,function(){
+							if(returned===true){
+								console.log(returned);
+								fpsids.push(ID);
+							}
+						});
+						
+						
         				}
         				else{	
-            				lcd.clear();
+            					lcd.clear();
 	    					lcd.setCursor(0, 0);
 	    					lcd.print("Database issue");
         				}
         			//connection.end()
     				})
-				//sendSMS();
+				}
+				else{
+					lcd.clear();
+	    				lcd.setCursor(0, 0);
+	    				lcd.print("Already recorded");
+				}
 			}, function(err) {
 				console.log("identify err: " + fps.decodeError(err));
 			});
 		}//End of capture finger
-		,2000);//Endo of set interval function;
+		,3000);//Endo of set interval function;
 	},
 	function(err) {
 		console.log('init err: ' + fps.decodeError(err));
 	});
 }//End of startFingerScan function
 
-function storeAttendance(courseCode,studentId){
-	console.log('Attendance recorded '+'course: '+courseCode+' studentid:'+studentId);
-}
+function storeAttendance(ID,courseCode,studentId,classval,cb){//cb is used for callback
+	console.log("Inside Store attendance function");
+	console.log(classval);
+	var t = new Date();
+	var YYYY = t.getFullYear();
+	var MM = ((t.getMonth() + 1 < 10) ? '0' : '') + (t.getMonth() + 1);
+	var DD = ((t.getDate() < 10) ? '0' : '') + t.getDate();
+	var HH = ((t.getHours() < 10) ? '0' : '') + t.getHours();
+	var mm = ((t.getMinutes() < 10) ? '0' : '') + t.getMinutes();
+	var ss = ((t.getSeconds() < 10) ? '0' : '') + t.getSeconds();
+	var dateval=YYYY+'-'+MM+'-'+DD;
+	var timeval=HH+':'+mm+':'+ss;
+	var query1=connection.query('INSERT INTO IOTSCHOOL.Attendance VALUES (?,?,?,?,?,?)',[ID,studentId,classval,courseCode,timeval,dateval]);
+	query1.on("result",function (row) {
+        		console.log("Insert:query executed");
+        		returned=true;
+			stored=true;
+    	});
+    	query1.on("end",function () {
+        	if(returned ===true){
+	    		//returned=false;
+	  		lcd.clear();
+	    		lcd.setCursor(0, 0);
+	    		lcd.print("Record:"+studentId);
+			console.log('Attendance recorded '+'course: '+courseCode+' studentid:'+studentId);
+        	}
+        	else{	
+            		lcd.clear();
+	    		lcd.setCursor(0, 0);
+	    		lcd.print("Cant Record");
+        	}
+    	})
+}//End of storeAttendance function
 });//End of lcd on function
 
 // If ctrl+c is hit, free resources and exit.
