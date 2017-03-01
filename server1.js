@@ -66,10 +66,36 @@ function takeKeypadInput(){
 					lcd.clear();//Clears the text Enter pass key
 				console.log(matrix[i][j]);
 				passcode=passcode+matrix[i][j];
-				if(matrix[i][j]!='#'){
+				if(matrix[i][j]!='#'&&matrix[i][j]!='*'){
 					lcd.print(matrix[i][j]);
 				}
-				if(matrix[i][j]=='#' && logout==0){
+				if(matrix[i][j]=='*'){
+					if(passcode.length<=2){
+					   count=0;
+					   lcd.clear();
+					   lcd.setCursor(0, 0);
+					   lcd.print("Please Enter the");
+					   lcd.once('printed', function() {
+						lcd.setCursor(0, 1);
+						lcd.print("Passkey");
+					   });
+					  if(passcode.length==2){
+					   passcode=passcode.substring(0,passcode.length-2);
+					   }
+					  else{
+					   passcode=passcode.substring(0,passcode.length-1);
+					   console.log("Inside If Passcode"+passcode);
+					  }
+					}
+					else{
+						lcd.clear();
+						lcd.setCursor(0, 0);
+						passcode=passcode.substring(0,passcode.length-2);
+						console.log("Inside Else Passcode"+passcode);
+						lcd.print(passcode);
+					}
+				}
+				else if(matrix[i][j]=='#' && logout==0){
 					console.log('If log 0 Value of logout '+logout);
 					clearInterval(interval);
 					passcode=passcode.substring(0,passcode.length-1);
