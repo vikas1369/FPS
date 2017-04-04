@@ -64,6 +64,6 @@ function retrieveData() {
    var values = sheet1.getRange(count,2,1,colnum).getValues();//count,2 is for cell no then 1 is for the no of rows and then colnum is for number of columns. So it selects all the the cells corresponding to a roll no
    for(var i in values[0]){
      sum += values[0][i];//Get the sum
+   }
    return sum;
-}
  }
