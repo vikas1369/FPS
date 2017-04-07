@@ -1,0 +1,20 @@
+#!/bin/sh
+#/etc/init.d/fps
+export PATH=$PATH:/usr/bin
+export NODE_PATH=$NODE_PATH:/usr/lib/node_modules
+export HOME=/root 
+
+case "$1" in
+  start)
+    /usr/bin/forever -p /root/.forever --sourceDir='/home/pi/FPS' -p /home/pi/FPS server1.js
+    ;;
+  stop)
+    exec /usr/bin/forever stopall
+    ;;
+  *)
+
+  echo "Usage: /etc/init.d/fps {start|stop}"
+  exit 1
+  ;;
+esac
+exit 0
