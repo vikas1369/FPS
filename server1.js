@@ -1,4 +1,3 @@
-//In this module intergration of Keypad and LCD module is done
 var rpio = require('rpio');
 var GT511C3 = require('gt511c3');
 var mysql      = require('mysql');
@@ -71,6 +70,7 @@ function takeKeypadInput(){
 				}
 				if(matrix[i][j]=='*'){
 					if(passcode.length<=2){
+				           if(logout==0){
 					   count=0;
 					   lcd.clear();
 					   lcd.setCursor(0, 0);
@@ -79,6 +79,17 @@ function takeKeypadInput(){
 						lcd.setCursor(0, 1);
 						lcd.print("Passkey");
 					   });
+						}
+				           else if(logout==1){
+					   count=0;
+					   lcd.clear();
+					   lcd.setCursor(0, 0);
+					   lcd.print("Ready for Finger");
+					   lcd.once('printed', function() {
+						lcd.setCursor(0, 1);
+						lcd.print("Scanning");
+					   });
+					  }
 					  if(passcode.length==2){
 					   passcode=passcode.substring(0,passcode.length-2);
 					   }
@@ -201,7 +212,13 @@ function signOut(passkey){
 		});
 	}
 	else{
+		lcd.clear();
+		lcd.print("Ready for finger");
+		lcd.once('printed', function() {
+		lcd.setCursor(0, 1);
+		lcd.print("scanning");
 		takeKeypadInput();
+		});
 	}
 	
 }
