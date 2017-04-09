@@ -16,6 +16,8 @@ var isInit=false;
 var durFingerScan;
 var KEY;
 var logout=0;
+var intervalInit;
+var errorflag=false;
 rpio.open(3, rpio.OUTPUT, rpio.LOW);
   lcd = new Lcd({
     rs: 18,
@@ -84,11 +86,7 @@ function takeKeypadInput(){
 					   count=0;
 					   lcd.clear();
 					   lcd.setCursor(0, 0);
-					   lcd.print("Ready for Finger");
-					   lcd.once('printed', function() {
-						lcd.setCursor(0, 1);
-						lcd.print("Scanning");
-					   });
+					   lcd.print("Press the finger");
 					  }
 					  if(passcode.length==2){
 					   passcode=passcode.substring(0,passcode.length-2);
@@ -213,12 +211,8 @@ function signOut(passkey){
 	}
 	else{
 		lcd.clear();
-		lcd.print("Ready for finger");
-		lcd.once('printed', function() {
-		lcd.setCursor(0, 1);
-		lcd.print("scanning");
+		lcd.print("Press the finger");
 		takeKeypadInput();
-		});
 	}
 	
 }
@@ -232,15 +226,21 @@ function endsWith(str,suffix){
 //If it successfully matches it displays the Roll No. of student on LCD and 
 //It continue to look for next thumb impression
 function startFingerScan(courseCode){
+	var count=0;
 	console.log('Inside finger scan');
-	lcd.clear();
-	lcd.setCursor(0, 0);
-	lcd.print("Ready for Finger");
-	lcd.once('printed', function() {
-	lcd.setCursor(0, 1);
-	lcd.print("scanning");
-	});
 	if(isInit===false){
+	intervalInit=setInterval(function(){
+	if(count==3){
+			count=0;
+			lcd.clear();
+			lcd.setCursor(0, 0);
+			lcd.print('Initializing');
+		}
+		if(count<3){
+			count++;
+			lcd.print('.');
+		}
+	},200);
 	fps.init().then(
 	function() {
 		isInit = true;
@@ -260,6 +260,10 @@ function startFingerScan(courseCode){
 }//End of startFingerScan function
 
 function takeAttendance(courseCode){
+	clearInterval(intervalInit);
+	lcd.clear();
+	lcd.setCursor(0, 0);
+	lcd.print("Press the finger");
 	var fpsids=new Array();
 	var studentId;
 	var classval;
@@ -277,7 +281,7 @@ function takeAttendance(courseCode){
 		//seconds=(seconds<60)?Math.round(timeDiff%60):(seconds+Math.round(timeDiff%60));
 		seconds=timeDiff/1000;
 		console.log('Seconds:'+seconds);
-		if(seconds>=30){
+		if(seconds>=60){
 			logout=0;
 			fps.ledONOFF(0);
 			clearInterval(durFingerScan);
@@ -291,6 +295,12 @@ function takeAttendance(courseCode){
 			});
 		}
 		else{
+		if(errorflag==true){
+			lcd.clear();
+			lcd.setCursor(0, 0);
+			lcd.print("Press the finger");
+			errorflag=false;
+		}
 		fps.captureFinger(0)
 			.then(function() {
 				return fps.identify();
@@ -343,7 +353,19 @@ function takeAttendance(courseCode){
 	    				lcd.print("Already recorded");
 				}
 			}, function(err) {
-				console.log("identify err: " + fps.decodeError(err));
+				
+				//fps.decodeError(err)
+				if(err==4104){
+					errorflag=true;
+					lcd.clear();
+	    				lcd.setCursor(0, 0);
+	    				lcd.print("Fingerprint not");
+					lcd.once('printed',function(){
+					lcd.setCursor(0, 1);
+	    				lcd.print("Found");
+				});
+				}
+				console.log("identify err: " +fps.decodeError(err) );
 			});
 		}//End of capture finger
 		}
@@ -394,4 +416,3 @@ process.on('SIGINT', function() {
   lcd.close();
   process.exit();
 });
-
