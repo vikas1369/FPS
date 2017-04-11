@@ -12,6 +12,7 @@ var connection;
 var code="";
 var comeout=0;
 var returned=false;
+var returned1=false;
 var isInit=false;
 var durFingerScan;
 var KEY;
@@ -135,6 +136,7 @@ function takeKeypadInput(){
 //amazon db for corresponing course. If it is successful then fingerprint scanning
 //is started
 function checkPassKey(passkey){
+	console.log("Returned:"+returned1);
 	KEY=passkey;
 	var count=0;
 	var count1=5;
@@ -175,14 +177,15 @@ function checkPassKey(passkey){
         console.log("Result");
         console.log(row.Coursecode);
         courseCode=row.Coursecode;
-        returned=true;
+        returned1=true;
     });
     query1.on("end",function () {
 	clearInterval(intervalDB);
-        if(returned ===true){
+        if(returned1 ===true){
             console.log("Successful");
+	    returned1=false;
+	    console.log("Returned modified to:"+returned1);
 	    startFingerScan(courseCode);
-	    returned=false;
         }
         else{	
         lcd.clear();
@@ -206,6 +209,7 @@ function signOut(passkey){
 		lcd.setCursor(0, 1);
 		lcd.print("Passkey");
 		logout=0;
+		connection.end();
 		takeKeypadInput();
 		});
 	}
@@ -282,6 +286,7 @@ function takeAttendance(courseCode){
 		seconds=timeDiff/1000;
 		console.log('Seconds:'+seconds);
 		if(seconds>=60){
+			connection.end();
 			logout=0;
 			fps.ledONOFF(0);
 			clearInterval(durFingerScan);
