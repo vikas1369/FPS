@@ -322,9 +322,9 @@ function takeAttendance(courseCode){
         				console.log(row);
 					console.log(row.Studentid);
 					console.log(row.Class);
-					lcd.clear();
-	    				lcd.setCursor(0, 0);
-	    				lcd.print("RNo:" +row.Studentid );
+					//lcd.clear();
+	    				//lcd.setCursor(0, 0);
+	    				//lcd.print("RNo:" +row.Studentid );
 	    				studentId=row.Studentid;
 					classval=row.Class;
 					FPSID=ID;
@@ -401,6 +401,10 @@ function storeAttendance(ID,courseCode,studentId,classval,cb){//cb is used for c
 	  		lcd.clear();
 	    		lcd.setCursor(0, 0);
 	    		lcd.print("Record:"+studentId);
+			lcd.once('printed',function(){
+				lcd.setCursor(0, 1);
+	    			lcd.print(DD+"/"+MM+" "+HH+":"+mm);
+			});
 			console.log('Attendance recorded '+'course: '+courseCode+' studentid:'+studentId);
 			cb();
         	}
