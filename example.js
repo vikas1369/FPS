@@ -17,7 +17,7 @@ var GT511C3 = require('gt511c3');
 var async = require('async');
 var fs = require('fs');
 
-var fps = new GT511C3('/dev/ttyAMA0', {
+var fps = new GT511C3('/dev/ttyS0', {
 	baudrate: 115200
 	//baudrate: 57600,
 	//baudrate: 38400,
@@ -26,7 +26,7 @@ var fps = new GT511C3('/dev/ttyAMA0', {
 	//debug: true
 });
 
-var ID_TO_USE = 199;
+var ID_TO_USE = 3;
 var TEMPLATE = new Buffer(498);
 var TEMPLATE_PATH = './';
 var IMAGE_PATH = './';

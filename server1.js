@@ -2,6 +2,7 @@ var rpio = require('rpio');
 var GT511C3 = require('gt511c3');
 var mysql      = require('mysql');
 var Lcd = require('lcd');
+var mqtt = require('mqtt')
 //This program takes the input from the keypad & displays the text on the terminal
 /*
  * The sleep functions block, but rarely in these simple programs does one care
@@ -19,6 +20,8 @@ var KEY;
 var logout=0;
 var intervalInit;
 var errorflag=false;
+var client;
+var fpsidsr=new Array();
 rpio.open(3, rpio.OUTPUT, rpio.LOW);
   lcd = new Lcd({
     rs: 18,
@@ -55,6 +58,7 @@ lcd.on('ready', function() {
 	lcd.print("Passkey");
 	});
 	takeKeypadInput();
+	startEnrollment();
 function takeKeypadInput(){
 		var count=0;
 		var passcode='';
@@ -130,6 +134,122 @@ function takeKeypadInput(){
 }
 
 //end of keypad code 
+
+function startEnrollment(){
+console.log("Going to start enrollment");
+client  = mqtt.connect('mqtt://broker.mqttdashboard.com');
+client.on('connect', function () {
+    console.log("Connected");
+    client.subscribe('student/init')
+    //client.publish('presence', 'Hello mqtt')
+});
+client.on('message', function (topic, message) {
+	lcd.clear();
+	lcd.setCursor(0, 0);
+	lcd.print("Press Finger for");
+	lcd.once('printed', function() {
+	lcd.setCursor(0, 1);
+	lcd.print("Registration");
+	});
+	// message is Buffer
+    	console.log(message.toString());
+        //client.publish('student/register', fpsid.toString());
+        //client.publish('student/register', 'false');
+	initializeFPS();
+});	
+}
+
+function initializeFPS(){
+	console.log("Inside Initialize FPS");
+	if(isInit==false){
+	fps.init().then(
+	function() {
+		isInit = true;
+		console.log('init: OK!');
+		console.log('firmware version: ' + fps.firmwareVersion);
+		console.log('iso area max: ' + fps.isoAreaMaxSize);
+		console.log('device serial number: ' + fps.deviceSerialNumber);
+		getFPSIds();
+	},
+	function(err) {
+		console.log('init err: ' + fps.decodeError(err));
+		client.publish('student/register', 'false');
+	});
+	}
+	else{
+		getFPSIds();
+	}
+}
+
+function getFPSIds(){
+	fpsidsr=[];
+	connection = mysql.createConnection({
+        host     : 'iot.cqsrh7cmen98.us-west-2.rds.amazonaws.com',
+        user     : 'vikas1369',
+        password : 'indica108',
+    });
+	
+    connection.connect(function(err) {
+        if (err) {
+            console.error('error connecting: ' + err.stack);
+            return;
+        }
+        console.log('connected as id ' + connection.threadId);
+    });
+	var query1=connection.query('SELECT FPSid FROM IOTSCHOOL.Students');
+    query1.on("error",function (err) {
+        console.log(err.message);
+	client.publish('student/register', 'false');
+    });
+	query1.on("result",function (rows) {
+        fpsidsr.push(rows.FPSid);
+        returned1=true;
+    });
+	query1.on("end",function () {
+        if(returned1 ===true){
+            console.log("Successful");
+	    returned1=false;
+	    identifyId();
+        }
+        else{	
+       	console.log("Try again");
+	client.publish('student/register', 'false');
+        }
+        //connection.end()
+    });
+}
+
+function identifyId(){
+	console.log("In identify id");
+	var id;
+	for(var i=0;i<fpsidsr.length;i++){
+	console.log(fpsidsr[i]);
+	}
+	for(var i=0;i<200;i++){
+		id=i;
+		if(fpsidsr.indexOf(i)>=0);
+		else break;	
+	}
+	console.log(id);
+	enrollFinger(id);
+}
+
+function enrollFinger(id){
+		console.log("In enroll");
+		fps.ledONOFF(1).then(function() {
+			console.log('ledON: OK!');
+		fps.enroll(id).then(function() {
+			console.log('enroll: enrolled!');
+			client.publish('student/register', id.toString());
+		}, function(err) {
+			console.log('enroll err: ' + fps.decodeError(err));
+			client.publish('student/register', 'false');
+		});
+		}, function(err) {
+			console.log('ledON error: ' + fps.decodeError(err));
+		});
+}
+
 
 //Input:Passkey entered by the professor
 //It checks the passkey and tries to match it with the value stored in 

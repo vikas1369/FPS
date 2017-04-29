@@ -1,6 +1,6 @@
 console.log('First Nodejs Project');
 var GT511C3 = require('gt511c3');
-var fps = new GT511C3('/dev/ttyAMA0', {
+var fps = new GT511C3('/dev/ttyS0', {
 	baudrate: 115200
 	//baudrate: 57600,
 	//baudrate: 38400,
