@@ -183,6 +183,7 @@ function initializeFPS(){
 
 function getFPSIds(){
 	fpsidsr=[];
+	var error_occured=false;
 	connection = mysql.createConnection({
         host     : 'iot.cqsrh7cmen98.us-west-2.rds.amazonaws.com',
         user     : 'vikas1369',
@@ -200,6 +201,7 @@ function getFPSIds(){
     query1.on("error",function (err) {
         console.log(err.message);
 	client.publish('student/register', 'false');
+	error_occured=true;
     });
 	query1.on("result",function (rows) {
         fpsidsr.push(rows.FPSid);
@@ -211,9 +213,10 @@ function getFPSIds(){
 	    returned1=false;
 	    identifyId();
         }
-        else{	
-       	console.log("Try again");
-	client.publish('student/register', 'false');
+        else if(error_occured==false){	
+       	//Empty set is returned
+	console.log("Enrolling fingerprint on id 0");
+	enrollFinger(0);//Enroll on fingerprint id 0
         }
         //connection.end()
     });
@@ -436,42 +439,101 @@ function takeAttendance(courseCode){
 				{
 				lcd.clear();
 				lcd.setCursor(0, 0);
-				var query1=connection.query('SELECT Studentid,Class FROM IOTSCHOOL.Students WHERE FPSid=?',[ID]);
-				query1.on("result",function (row) {
-        				console.log("Result");
-        				console.log(row);
-					console.log(row.Studentid);
-					console.log(row.Class);
-					//lcd.clear();
-	    				//lcd.setCursor(0, 0);
-	    				//lcd.print("RNo:" +row.Studentid );
-	    				studentId=row.Studentid;
-					classval=row.Class;
-					FPSID=ID;
-        				returned=true;
-    				});
-    				query1.on("end",function () {
-        				if(returned ===true){
-            				console.log("Query for Roll No. successful");
-	    					returned=false;
-						var stored;
-	    					storeAttendance(ID,courseCode,studentId,classval,function(){
+				connection.query('SELECT * FROM IOTSCHOOL.Attendance WHERE FPSid=? and ADate=CURDATE() and Coursecode=?',[ID,courseCode],function(error,result){
+				if(error){
+					console.log("Database error");
+				}
+				else if(result.length>0){
+					console.log("Record exist checking if time last attendance was added was before more than 1 hours");
+					connection.query('SELECT * FROM IOTSCHOOL.Attendance WHERE FPSid=? and ADate=CURDATE() and HOUR(TIMEDIFF(CURTIME(),ATime))<1 and Coursecode=?',[ID,courseCode],function(error,result){
+					if(error){
+						console.log("error");
+					}
+					else if(result.length>0){
+						console.log("Don't add");
+						lcd.print("Already recorded");
+					}
+					else{
+						console.log("Record added more than 1 hour before add record");
+						connection.query("SELECT Studentid,Class FROM IOTSCHOOL.Students WHERE FPSid=?",[ID],function(error,result){
+						if(error){
+							console.log("Database error");
+						}
+						else{
+							studentId=result[0].Studentid;
+							classval=result[0].Class;
+							FPSID=ID;
+							//console.log(result[0].Studentid);
+							storeAttendance(ID,courseCode,studentId,classval,function(){
 							if(returned===true){
 								console.log(returned);
 								fpsids.push(ID);
 							}
+							});
+						}	
 						});
-						
-						
-        				}
-        				else{	
-            					lcd.clear();
-	    					lcd.setCursor(0, 0);
-	    					lcd.print("Database issue");
-        				}
-        			//connection.end()
-    				})
+						connection.query("SELECT * FROM IOTSCHOOL.Course WHERE Coursecode=? AND LDate=CURDATE() AND HOUR(TIMEDIFF(CURTIME(),LTime))<1",[courseCode],function(error,result){
+						if(error)
+							console.log('error');
+						else if(result.length>0){
+							console.log("Dont update the count");
+						}
+						else{
+							console.log("Update the count");
+							connection.query("UPDATE IOTSCHOOL.Course SET Numclass=Numclass+1,LTime=CURTIME(),LDate=CURDATE() WHERE Coursecode=?",[courseCode],function(error,result){
+							if(error){
+								console.log("Database error");
+							}
+							else{
+							console.log("updated the count");
+							}		
+							});
+						}
+						});
+					}
+					});
 				}
+				else{
+					console.log("Record doesn't exist just add");
+					connection.query("SELECT Studentid,Class FROM IOTSCHOOL.Students WHERE FPSid=?",[ID],function(error,result){
+						if(error){
+							console.log("Database error");
+						}
+						else{
+							studentId=result[0].Studentid;
+							classval=result[0].Class;
+							FPSID=ID;
+							//console.log(result[0].Studentid);
+							storeAttendance(ID,courseCode,studentId,classval,function(){
+							if(returned===true){
+								console.log(returned);
+								fpsids.push(ID);
+							}
+							});
+						}	
+					});
+					connection.query("SELECT * FROM IOTSCHOOL.Course WHERE Coursecode=? AND LDate=CURDATE() AND HOUR(TIMEDIFF(CURTIME(),LTime))<1",[courseCode],function(error,result){
+					if(error){
+						throw error;
+					}
+					else if(result.length>0){
+						console.log("Dont update the count");
+					}
+					else{
+						console.log("Update the count");
+						connection.query("UPDATE IOTSCHOOL.Course SET Numclass=Numclass+1,LTime=CURTIME(),LDate=CURDATE() WHERE Coursecode=?",[courseCode],function(error,result){
+						if(error){
+							console.log("Database error");
+						}
+						else{
+						console.log("updated the count");
+						}	
+						});
+					}
+					});
+				}
+				});
+				}//End of if
 				else{
 					lcd.clear();
 	    				lcd.setCursor(0, 0);
