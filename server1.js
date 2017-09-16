@@ -185,9 +185,9 @@ function getFPSIds(){
 	fpsidsr=[];
 	var error_occured=false;
 	connection = mysql.createConnection({
-        host     : 'iot.cqsrh7cmen98.us-west-2.rds.amazonaws.com',
-        user     : 'vikas1369',
-        password : 'indica108',
+        host     : '<hostname>',
+        user     : '<username>',
+        password : '<password>',
     });
 	
     connection.connect(function(err) {
